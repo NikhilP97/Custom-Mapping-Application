@@ -122,7 +122,17 @@ public abstract class Graph {
 	 */
 	public List<Integer> degreeSequence() {
 		// XXX: Implement in part 1 of week 2
-		return null;
+		List<Integer> degreeSeqList = new ArrayList<Integer>();
+		for(int i = 0; i < numVertices; i++) {
+			int temp = getNeighbors(i).size() + getInNeighbors(i).size();
+			degreeSeqList.add(temp);
+		}
+		Collections.sort(degreeSeqList);
+		Collections.reverse(degreeSeqList);
+		System.out.println("After sorting : "+degreeSeqList);
+		
+		
+		return degreeSeqList;
 	}
 	
 	/**
@@ -262,7 +272,19 @@ public abstract class Graph {
 		// Test your distance2 code here.
 		System.out.println("Testing distance-two methods on sample graphs...");
 		System.out.println("Goal: implement method using two approaches.");
-
+		
+		GraphAdjMatrix graphFromFileMatrix = new GraphAdjMatrix();
+		GraphLoader.loadRoadMap("data/testdata/simpletest.map", graphFromFileMatrix);
+		
+		System.out.println(graphFromFileMatrix);
+		List<Integer> twoHops = graphFromFileMatrix.getDistance2(0);
+		
+		System.out.println("two hops are : "+twoHops);
+		
+		GraphLoader.loadGraph("data/graders/mod1/fourNodeGraph", graphFromFileMatrix);
+		System.out.println(graphFromFileMatrix);
+		List<Integer> newTwoHops = graphFromFileMatrix.getDistance2(0);
+		System.out.println("two hops are : "+twoHops);
 
 		
 	}
