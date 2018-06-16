@@ -280,11 +280,13 @@ public abstract class Graph {
 		List<Integer> twoHops = graphFromFileMatrix.getDistance2(0);
 		
 		System.out.println("two hops are : "+twoHops);
-		
-		GraphLoader.loadGraph("data/graders/mod1/fourNodeGraph", graphFromFileMatrix);
-		System.out.println(graphFromFileMatrix);
-		List<Integer> newTwoHops = graphFromFileMatrix.getDistance2(0);
-		System.out.println("two hops are : "+twoHops);
+		System.out.println();
+		GraphAdjMatrix graphFromFourNodes = new GraphAdjMatrix();
+		System.out.println("5 Node graph");
+		GraphLoader.loadGraph("data/graders/mod1/fourNodeGraph.txt", graphFromFourNodes);
+		System.out.println(graphFromFourNodes);
+		List<Integer> newTwoHops = graphFromFourNodes.getDistance2(0);
+		System.out.println("two hops are : "+newTwoHops);
 
 		
 	}

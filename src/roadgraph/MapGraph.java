@@ -8,7 +8,12 @@
 package roadgraph;
 
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -24,7 +29,11 @@ import util.GraphLoader;
  */
 public class MapGraph {
 	//TODO: Add your member variables here in WEEK 3
-	
+	private int numOfVertices;
+	private int numOfEdges;
+	private HashSet<GeographicPoint> setOfVertices;
+	private HashMap<GeographicPoint, MapNode> getNodefromLocation;
+	private HashSet<RoadNode> setOfRoads;
 	
 	/** 
 	 * Create a new empty MapGraph 
@@ -32,6 +41,11 @@ public class MapGraph {
 	public MapGraph()
 	{
 		// TODO: Implement in this constructor in WEEK 3
+		numOfVertices = 0;
+		numOfEdges = 0;
+		setOfVertices = new HashSet<GeographicPoint>();
+		getNodefromLocation = new HashMap<GeographicPoint, MapNode>();
+		setOfRoads = new HashSet<RoadNode>();
 	}
 	
 	/**
@@ -41,7 +55,7 @@ public class MapGraph {
 	public int getNumVertices()
 	{
 		//TODO: Implement this method in WEEK 3
-		return 0;
+		return numOfVertices;
 	}
 	
 	/**
@@ -51,7 +65,7 @@ public class MapGraph {
 	public Set<GeographicPoint> getVertices()
 	{
 		//TODO: Implement this method in WEEK 3
-		return null;
+		return setOfVertices;
 	}
 	
 	/**
@@ -61,7 +75,7 @@ public class MapGraph {
 	public int getNumEdges()
 	{
 		//TODO: Implement this method in WEEK 3
-		return 0;
+		return numOfEdges;
 	}
 
 	
@@ -76,7 +90,15 @@ public class MapGraph {
 	public boolean addVertex(GeographicPoint location)
 	{
 		// TODO: Implement this method in WEEK 3
-		return false;
+		if(setOfVertices.contains(location) || location == null) {
+			return false;
+		}
+		
+		MapNode newVertx = new MapNode(location);
+		numOfVertices++;
+		setOfVertices.add(location);
+		getNodefromLocation.put(location, newVertx);
+		return true;
 	}
 	
 	/**
@@ -95,6 +117,17 @@ public class MapGraph {
 			String roadType, double length) throws IllegalArgumentException {
 
 		//TODO: Implement this method in WEEK 3
+		if(!setOfVertices.contains(from) && !setOfVertices.contains(to) && from == null && to == null && length == 0) {
+			return;
+		}
+		numOfEdges++;
+		MapNode source = getNodefromLocation.get(from);
+		MapNode destination = getNodefromLocation.get(to);
+		source.setNeighbours(destination);
+		RoadNode newRoadNode = new RoadNode(roadName, roadType, length, source, destination);
+		setOfRoads.add(newRoadNode);
+		
+		
 		
 	}
 	
@@ -127,7 +160,32 @@ public class MapGraph {
 		
 		// Hook for visualization.  See writeup.
 		//nodeSearched.accept(next.getLocation());
-
+		
+		MapNode startNode = getNodefromLocation.get(start);
+		MapNode destNode = getNodefromLocation.get(goal);
+		HashSet<MapNode> visited = new HashSet<MapNode>();
+		Queue<MapNode> queue = new LinkedList<MapNode>();
+		MapNode currentNode = startNode;
+		queue.add(startNode);
+		while(!queue.isEmpty() && currentNode != destNode) {
+			currentNode = queue.remove();
+			System.out.println(currentNode.getGeoPoint());
+			if(!visited.contains(currentNode)) {
+				visited.add(currentNode);
+				nodeSearched.accept(currentNode.getGeoPoint());
+				for(MapNode currentNeighbour : currentNode.getNeighbours()) {
+					if(!visited.contains(currentNeighbour)) {
+						currentNeighbour.setParent(currentNode);
+						if(currentNeighbour.getGeoPoint().getX() == goal.getX() && currentNeighbour.getGeoPoint().getY() == goal.getY()) {
+							return searchedPath(currentNeighbour, start);
+						}
+						queue.add(currentNeighbour);
+					}
+					
+				}
+			}
+		}
+		System.out.println("No Path found");
 		return null;
 	}
 	
@@ -193,12 +251,33 @@ public class MapGraph {
 		
 		// Hook for visualization.  See writeup.
 		//nodeSearched.accept(next.getLocation());
-		
 		return null;
 	}
 
 	
 	
+	private List<GeographicPoint> searchedPath(MapNode currentNeighbour, GeographicPoint start) {
+		// TODO Auto-generated method stub
+		System.out.println("searching path");
+		List<GeographicPoint> path = new LinkedList<GeographicPoint>();
+		MapNode currentNode = currentNeighbour;
+		path.add(0, currentNode.getGeoPoint());
+		while(currentNode.getGeoPoint().getX() != start.getX() || currentNode.getGeoPoint().getY() != start.getY()) {
+			
+			currentNode = currentNode.getParent();
+			path.add(0, currentNode.getGeoPoint());
+//			System.out.println(path);
+		}
+		
+		return path;
+	}
+	
+	private void printPath(List<GeographicPoint> path) {
+		for(GeographicPoint currentPoint : path) {
+			System.out.print(currentPoint+" -> ");
+		}
+	}
+
 	public static void main(String[] args)
 	{
 		System.out.print("Making a new map...");
@@ -206,6 +285,13 @@ public class MapGraph {
 		System.out.print("DONE. \nLoading the map...");
 		GraphLoader.loadRoadMap("data/testdata/simpletest.map", firstMap);
 		System.out.println("DONE.");
+		
+		GeographicPoint testStart = new GeographicPoint(1.0, 1.0);
+		GeographicPoint testEnd = new GeographicPoint(8.0, -1.0);
+		
+		List<GeographicPoint> getPath = firstMap.bfs(testStart, testEnd);
+//		System.out.println(getPath);
+		firstMap.printPath(getPath);
 		
 		// You can use this method for testing.  
 		
