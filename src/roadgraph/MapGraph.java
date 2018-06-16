@@ -7,7 +7,6 @@
  */
 package roadgraph;
 
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -21,22 +20,23 @@ import geography.GeographicPoint;
 import util.GraphLoader;
 
 /**
- * @author UCSD MOOC development team and YOU
+ * @author UCSD MOOC development team and Nikhil Pinto
  * 
  * A class which represents a graph of geographic locations
  * Nodes in the graph are intersections between 
- *
+ * Uses MapNode & RoadNode classes for functionality
  */
 public class MapGraph {
 	//TODO: Add your member variables here in WEEK 3
-	private int numOfVertices;
+	private int numOfVertices; 
 	private int numOfEdges;
 	private HashSet<GeographicPoint> setOfVertices;
-	private HashMap<GeographicPoint, MapNode> getNodefromLocation;
-	private HashSet<RoadNode> setOfRoads;
+	private HashMap<GeographicPoint, MapNode> getNodefromLocation; // to get the Node of a graph from a Geographic Point
+	private HashSet<RoadNode> setOfRoads; // A set containing Road Nodes which hold properties like road name, road type,
+										  // length, intersection Nodes
 	
 	/** 
-	 * Create a new empty MapGraph 
+	 * Create a new empty MapGraph, initialize instance variables 
 	 */
 	public MapGraph()
 	{
@@ -97,6 +97,7 @@ public class MapGraph {
 		MapNode newVertx = new MapNode(location);
 		numOfVertices++;
 		setOfVertices.add(location);
+		// Add to Map which stores location as key and MapNode as value
 		getNodefromLocation.put(location, newVertx);
 		return true;
 	}
@@ -123,8 +124,11 @@ public class MapGraph {
 		numOfEdges++;
 		MapNode source = getNodefromLocation.get(from);
 		MapNode destination = getNodefromLocation.get(to);
+		// Add neighbour
 		source.setNeighbours(destination);
+		// create new Road Node
 		RoadNode newRoadNode = new RoadNode(roadName, roadType, length, source, destination);
+		// Add to list of Road Nodes
 		setOfRoads.add(newRoadNode);
 		
 		
@@ -161,30 +165,41 @@ public class MapGraph {
 		// Hook for visualization.  See writeup.
 		//nodeSearched.accept(next.getLocation());
 		
+		// Create initial Nodes & required lists and queues
 		MapNode startNode = getNodefromLocation.get(start);
 		MapNode destNode = getNodefromLocation.get(goal);
 		HashSet<MapNode> visited = new HashSet<MapNode>();
 		Queue<MapNode> queue = new LinkedList<MapNode>();
+		
+		// holds current Node while searching
 		MapNode currentNode = startNode;
+		// Add start to queue & continue until all Nodes are explored
 		queue.add(startNode);
-		while(!queue.isEmpty() && currentNode != destNode) {
+		while(!queue.isEmpty()) {
 			currentNode = queue.remove();
-			System.out.println(currentNode.getGeoPoint());
+			System.out.println(currentNode.getGeoPoint()); // for debugging
+			
+			// Only if Node is not visited process it or else fetch the next Node from queue
 			if(!visited.contains(currentNode)) {
 				visited.add(currentNode);
-				nodeSearched.accept(currentNode.getGeoPoint());
+				nodeSearched.accept(currentNode.getGeoPoint()); // for visualizing on the front-end interface
+				// for every Neighbour of the current Node:
 				for(MapNode currentNeighbour : currentNode.getNeighbours()) {
+					// If Node not visited only then process or else check next
 					if(!visited.contains(currentNeighbour)) {
 						currentNeighbour.setParent(currentNode);
+						// If X, Y of current is same as X, Y of start : start backtracking and find path
 						if(currentNeighbour.getGeoPoint().getX() == goal.getX() && currentNeighbour.getGeoPoint().getY() == goal.getY()) {
 							return searchedPath(currentNeighbour, start);
 						}
+						// else add to queue
 						queue.add(currentNeighbour);
 					}
 					
 				}
 			}
 		}
+		// Return null if No Path found
 		System.out.println("No Path found");
 		return null;
 	}
@@ -255,23 +270,34 @@ public class MapGraph {
 	}
 
 	
-	
+	/** Find the path from goal to start using parent of each Node
+	 * 
+	 * @param MapNode The found destination
+	 * @param GeographicPoint The start point
+	 * @return The list of GeographicPoint that form the shortest path from 
+	 *   start to goal (including both start and goal).
+	 */
 	private List<GeographicPoint> searchedPath(MapNode currentNeighbour, GeographicPoint start) {
-		// TODO Auto-generated method stub
+		// TODO helper method
 		System.out.println("searching path");
 		List<GeographicPoint> path = new LinkedList<GeographicPoint>();
 		MapNode currentNode = currentNeighbour;
+		// Add the new Node to start of the list, hence the last Node will always appear first
 		path.add(0, currentNode.getGeoPoint());
+		// Get parent of current Node until you find the start Node
 		while(currentNode.getGeoPoint().getX() != start.getX() || currentNode.getGeoPoint().getY() != start.getY()) {
-			
 			currentNode = currentNode.getParent();
 			path.add(0, currentNode.getGeoPoint());
-//			System.out.println(path);
 		}
 		
 		return path;
 	}
 	
+	/** Find the path from start to goal using the list from any Search
+	 * 
+	 * @paramList<GeographicPoint> list of locations that make the path
+	 * @return nothing
+	 */
 	private void printPath(List<GeographicPoint> path) {
 		for(GeographicPoint currentPoint : path) {
 			System.out.print(currentPoint+" -> ");
@@ -290,7 +316,6 @@ public class MapGraph {
 		GeographicPoint testEnd = new GeographicPoint(8.0, -1.0);
 		
 		List<GeographicPoint> getPath = firstMap.bfs(testStart, testEnd);
-//		System.out.println(getPath);
 		firstMap.printPath(getPath);
 		
 		// You can use this method for testing.  
