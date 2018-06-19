@@ -8,10 +8,12 @@
 package roadgraph;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -126,6 +128,8 @@ public class MapGraph {
 		MapNode destination = getNodefromLocation.get(to);
 		// Add neighbour
 		source.setNeighbours(destination);
+		double distanceFromNodes = from.distance(to);
+		source.setEdgeLength(destination, distanceFromNodes);
 		// create new Road Node
 		RoadNode newRoadNode = new RoadNode(roadName, roadType, length, source, destination);
 		// Add to list of Road Nodes
@@ -174,9 +178,11 @@ public class MapGraph {
 		// holds current Node while searching
 		MapNode currentNode = startNode;
 		// Add start to queue & continue until all Nodes are explored
+		int countNoOfNodes = 0;
 		queue.add(startNode);
 		while(!queue.isEmpty()) {
 			currentNode = queue.remove();
+			countNoOfNodes++;
 			System.out.println(currentNode.getGeoPoint()); // for debugging
 			
 			// Only if Node is not visited process it or else fetch the next Node from queue
@@ -234,8 +240,63 @@ public class MapGraph {
 
 		// Hook for visualization.  See writeup.
 		//nodeSearched.accept(next.getLocation());
-		
-		return null;
+		System.out.println("Starting djkstra");
+		// Create initial Nodes & required lists and queues
+				MapNode startNode = getNodefromLocation.get(start);
+				MapNode destNode = getNodefromLocation.get(goal);
+				HashSet<MapNode> visited = new HashSet<MapNode>();
+				Comparator<MapNode> comparator = new PQueueForDijkstra();
+				PriorityQueue<MapNode> queue = new PriorityQueue<MapNode>(10, comparator);
+				
+				// holds current Node while searching
+				MapNode currentNode = startNode;
+				for(GeographicPoint currentPoint : setOfVertices ) {
+					MapNode curr = getNodefromLocation.get(currentPoint);
+					curr.setDistanceOfNode(Integer.MAX_VALUE);
+				}
+				// Add start to queue & continue until all Nodes are explored
+				currentNode.setDistanceOfNode(0);
+				int countNoOfNodes = 0;
+				queue.add(startNode);
+				while(!queue.isEmpty()) {
+					currentNode = queue.remove();
+					countNoOfNodes++;
+//					System.out.println(currentNode.getGeoPoint()); // for debugging
+//					System.out.println(queue);
+					// Only if Node is not visited process it or else fetch the next Node from queue
+					if(!visited.contains(currentNode)) {
+						visited.add(currentNode);
+						nodeSearched.accept(currentNode.getGeoPoint()); // for visualizing on the front-end interface
+						// If X, Y of current is same as X, Y of start : start backtracking and find path
+						if(currentNode.getGeoPoint().getX() == goal.getX() && currentNode.getGeoPoint().getY() == goal.getY()) {
+							System.out.println("Nodes visited :"+visited.size());
+							System.out.println("Nodes dequeued : "+countNoOfNodes);
+							return searchedPath(currentNode, start);
+						}
+						// for every Neighbour of the current Node:
+						for(MapNode currentNeighbour : currentNode.getNeighbours()) {
+							// If Node not visited only then process or else check next
+							if(!visited.contains(currentNeighbour)) {
+								double edgeLengthofNode = currentNode.getEdgeLength().get(currentNeighbour);
+								if(currentNode.getDistanceOfNode() + edgeLengthofNode < currentNeighbour.getDistanceOfNode()) {
+									double newNodeDistance = currentNode.getDistanceOfNode() + edgeLengthofNode;
+									currentNeighbour.setDistanceOfNode(newNodeDistance);
+									currentNeighbour.setParent(currentNode);
+									// add to queue
+									queue.add(currentNeighbour);
+								}
+								
+								
+								
+								
+							}
+							
+						}
+					}
+				}
+				// Return null if No Path found
+				System.out.println("No Path found");
+				return null;
 	}
 
 	/** Find the path from start to goal using A-Star search
@@ -266,6 +327,75 @@ public class MapGraph {
 		
 		// Hook for visualization.  See writeup.
 		//nodeSearched.accept(next.getLocation());
+		// Create initial Nodes & required lists and queues
+		System.out.println("starting A star search");
+		MapNode startNode = getNodefromLocation.get(start);
+		MapNode destNode = getNodefromLocation.get(goal);
+		HashSet<MapNode> visited = new HashSet<MapNode>();
+		Comparator<MapNode> comparator = new PQueueForAStar();
+		PriorityQueue<MapNode> queue = new PriorityQueue<MapNode>(10, comparator);
+		for(GeographicPoint currentPoint : setOfVertices ) {
+			MapNode curr = getNodefromLocation.get(currentPoint);
+			curr.setDistanceOfNode(Integer.MAX_VALUE);
+			curr.setFvalue(Integer.MAX_VALUE);
+		}
+		// holds current Node while searching
+		MapNode currentNode = startNode;
+		// Add start to queue & continue until all Nodes are explored
+		currentNode.setDistanceOfNode(0);
+		currentNode.setFvalue(currentNode.getGeoPoint().distance(goal));
+		double totaldistance = 0;
+		int countNoOfNodes = 0;
+		queue.add(startNode);
+		while(!queue.isEmpty()) {
+			currentNode = queue.remove();
+			countNoOfNodes++;
+			totaldistance = currentNode.getFvalue(); 
+//			System.out.println(currentNode.getGeoPoint()+" total distance: "+totaldistance); // for debugging
+//			System.out.println(queue);
+			// Only if Node is not visited process it or else fetch the next Node from queue
+			if(!visited.contains(currentNode)) {
+				visited.add(currentNode);
+				nodeSearched.accept(currentNode.getGeoPoint()); // for visualizing on the front-end interface
+				// If X, Y of current is same as X, Y of start : start backtracking and find path
+				if(currentNode.getGeoPoint().getX() == goal.getX() && currentNode.getGeoPoint().getY() == goal.getY()) {
+					System.out.println("Nodes visited :"+visited.size());
+					System.out.println("Nodes dequeued : "+countNoOfNodes);
+					return searchedPath(currentNode, start);
+				}
+				// for every Neighbour of the current Node:
+				for(MapNode currentNeighbour : currentNode.getNeighbours()) {
+					// If Node not visited only then process or else check next
+					double edgeLengthofNode = currentNode.getGeoPoint().distance(currentNeighbour.getGeoPoint());
+					double distanceFromGoal = currentNeighbour.getGeoPoint().distance(goal);
+					double parentNodeDistance = currentNode.getDistanceOfNode();
+					double thisNodeDistance = currentNeighbour.getDistanceOfNode();
+					double Gvalue = edgeLengthofNode+parentNodeDistance;
+					double Hvalue = distanceFromGoal;
+					double Fvalue = Gvalue+Hvalue;
+					if(!visited.contains(currentNeighbour)) {
+						
+						System.out.println("For "+currentNeighbour.getGeoPoint()+" G:"+Gvalue+", H:"+Hvalue+" = "+Fvalue +" < "+currentNeighbour.getFvalue());
+						System.out.println();
+						if((Fvalue) < currentNeighbour.getFvalue()) {
+							double newNodeDistance = Gvalue;
+							currentNeighbour.setDistanceOfNode(newNodeDistance);
+							currentNeighbour.setParent(currentNode);
+							
+							// add to queue
+							currentNeighbour.setFvalue(Fvalue);	
+							queue.add(currentNeighbour);
+							
+						}
+						
+					}
+					
+				}
+				System.out.println("Queue : "+queue);
+			}
+		}
+		// Return null if No Path found
+		System.out.println("No Path found");
 		return null;
 	}
 
@@ -279,7 +409,7 @@ public class MapGraph {
 	 */
 	private List<GeographicPoint> searchedPath(MapNode currentNeighbour, GeographicPoint start) {
 		// TODO helper method
-		System.out.println("searching path");
+		System.out.println("Path found, backtracking");
 		List<GeographicPoint> path = new LinkedList<GeographicPoint>();
 		MapNode currentNode = currentNeighbour;
 		// Add the new Node to start of the list, hence the last Node will always appear first
@@ -302,21 +432,22 @@ public class MapGraph {
 		for(GeographicPoint currentPoint : path) {
 			System.out.print(currentPoint+" -> ");
 		}
+		System.out.println();
 	}
 
 	public static void main(String[] args)
 	{
-		System.out.print("Making a new map...");
-		MapGraph firstMap = new MapGraph();
-		System.out.print("DONE. \nLoading the map...");
-		GraphLoader.loadRoadMap("data/testdata/simpletest.map", firstMap);
-		System.out.println("DONE.");
-		
-		GeographicPoint testStart = new GeographicPoint(1.0, 1.0);
-		GeographicPoint testEnd = new GeographicPoint(8.0, -1.0);
-		
-		List<GeographicPoint> getPath = firstMap.bfs(testStart, testEnd);
-		firstMap.printPath(getPath);
+//		System.out.print("Making a new map...");
+//		MapGraph firstMap = new MapGraph();
+//		System.out.print("DONE. \nLoading the map...");
+//		GraphLoader.loadRoadMap("data/testdata/simpletest.map", firstMap);
+//		System.out.println("DONE.");
+//		
+//		GeographicPoint testStart1 = new GeographicPoint(1.0, 1.0);
+//		GeographicPoint testEnd1 = new GeographicPoint(8.0, -1.0);
+//		
+//		List<GeographicPoint> getPath = firstMap.bfs(testStart1, testEnd1);
+//		firstMap.printPath(getPath);
 		
 		// You can use this method for testing.  
 		
@@ -325,7 +456,37 @@ public class MapGraph {
 		 * the Week 3 End of Week Quiz, EVEN IF you score 100% on the 
 		 * programming assignment.
 		 */
-		/*
+		GeographicPoint test1 = new GeographicPoint(4.0, 0.0);
+		GeographicPoint test2 = new GeographicPoint(4.0, 2.0);
+		GeographicPoint test3 = new GeographicPoint(5.0, 1.0);
+		GeographicPoint test4 = new GeographicPoint(7.0, 3.0);
+		System.out.println("Queue test");
+		MapNode Node1 = new MapNode(test1);
+		Node1.setFvalue(903);
+		MapNode Node2 = new MapNode(test2);
+		Node2.setFvalue(999);
+		MapNode Node3 = new MapNode(test3);
+		Node3.setFvalue(845);
+		MapNode Node4 = new MapNode(test4);
+		Node4.setFvalue(1189);
+		Comparator<MapNode> comparator = new PQueueForAStar();
+		PriorityQueue<MapNode> queue = new PriorityQueue<MapNode>(10, comparator);
+		System.out.println(queue);
+		queue.add(Node1);
+		System.out.println(queue);
+
+		queue.add(Node2);
+		System.out.println(queue);
+
+		queue.add(Node3);
+		System.out.println(queue);
+
+		queue.add(Node4);
+		System.out.println(queue);
+		queue.remove();
+		System.out.println(queue+"\n\n\n");
+		
+		
 		MapGraph simpleTestMap = new MapGraph();
 		GraphLoader.loadRoadMap("data/testdata/simpletest.map", simpleTestMap);
 		
@@ -333,8 +494,12 @@ public class MapGraph {
 		GeographicPoint testEnd = new GeographicPoint(8.0, -1.0);
 		
 		System.out.println("Test 1 using simpletest: Dijkstra should be 9 and AStar should be 5");
-		List<GeographicPoint> testroute = simpleTestMap.dijkstra(testStart,testEnd);
 		List<GeographicPoint> testroute2 = simpleTestMap.aStarSearch(testStart,testEnd);
+		List<GeographicPoint> testroute = simpleTestMap.dijkstra(testStart,testEnd);
+		
+		System.out.println("testroute2 "+testroute2);
+		simpleTestMap.printPath(testroute);
+		simpleTestMap.printPath(testroute2);
 		
 		
 		MapGraph testMap = new MapGraph();
@@ -346,7 +511,8 @@ public class MapGraph {
 		System.out.println("Test 2 using utc: Dijkstra should be 13 and AStar should be 5");
 		testroute = testMap.dijkstra(testStart,testEnd);
 		testroute2 = testMap.aStarSearch(testStart,testEnd);
-		
+		testMap.printPath(testroute);
+		testMap.printPath(testroute2);
 		
 		// A slightly more complex test using real data
 		testStart = new GeographicPoint(32.8674388, -117.2190213);
@@ -354,11 +520,12 @@ public class MapGraph {
 		System.out.println("Test 3 using utc: Dijkstra should be 37 and AStar should be 10");
 		testroute = testMap.dijkstra(testStart,testEnd);
 		testroute2 = testMap.aStarSearch(testStart,testEnd);
-		*/
+		testMap.printPath(testroute);
 		
 		
 		/* Use this code in Week 3 End of Week Quiz */
-		/*MapGraph theMap = new MapGraph();
+		System.out.println("Week 3 test!!!!!!!!!!!!\n\n\n\n\n");
+		MapGraph theMap = new MapGraph();
 		System.out.print("DONE. \nLoading the map...");
 		GraphLoader.loadRoadMap("data/maps/utc.map", theMap);
 		System.out.println("DONE.");
@@ -369,8 +536,9 @@ public class MapGraph {
 		
 		List<GeographicPoint> route = theMap.dijkstra(start,end);
 		List<GeographicPoint> route2 = theMap.aStarSearch(start,end);
-
-		*/
+		theMap.printPath(route);
+		theMap.printPath(route2);
+		
 		
 	}
 	
